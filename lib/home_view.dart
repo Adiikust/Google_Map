@@ -2,6 +2,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:google_map/location_serach_view.dart';
+import 'package:google_map/utils/constant.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 class HomeView extends StatefulWidget {
@@ -18,13 +20,16 @@ class _HomeViewState extends State<HomeView> {
     kMarker.addAll(allMarker);
   }
 
+  ///for marker
+  BitmapDescriptor markerIcon = BitmapDescriptor.defaultMarker;
+
   ///Google map controller
   final Completer<GoogleMapController> _kController =
       Completer<GoogleMapController>();
 
   ///Camera position
-  static const CameraPosition _kGooglePlex = CameraPosition(
-    target: LatLng(33.66062976080691, 73.08286701276366),
+  static final CameraPosition _kGooglePlex = CameraPosition(
+    target: LatLng(AppConstant.lat, AppConstant.lng),
     zoom: 14.4746,
   );
 
@@ -32,17 +37,31 @@ class _HomeViewState extends State<HomeView> {
   final List<Marker> kMarker = [];
   final List<Marker> kCurrentLocationMarker = [];
 
+  ///Custom marker
+  void addCustomIcon() {
+    BitmapDescriptor.fromAssetImage(
+            const ImageConfiguration(), "assets/Location_marker.png")
+        .then(
+      (icon) {
+        setState(() {
+          markerIcon = icon;
+        });
+      },
+    );
+  }
+
   ///Add marker in list
   final List<Marker> allMarker = [
     Marker(
       markerId: const MarkerId('1'),
       infoWindow: const InfoWindow(title: "1st", snippet: "Faizabad"),
-      position: const LatLng(33.66062976080691, 73.08286701276366),
+      position: LatLng(AppConstant.lat, AppConstant.lng),
       draggable: true,
+      icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
       onTap: () async {
         ///LatLng convert to address
-        List<Placemark> placemarks = await placemarkFromCoordinates(
-            33.66062976080691, 73.08286701276366);
+        List<Placemark> placemarks =
+            await placemarkFromCoordinates(AppConstant.lat, AppConstant.lng);
         final address = "${placemarks.first.street}";
         print(address);
       },
@@ -101,7 +120,21 @@ class _HomeViewState extends State<HomeView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Google Map")),
+      appBar: AppBar(
+        title: const Text("Google Map"),
+        actions: [
+          IconButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) => const LocationSearchView()),
+                );
+              },
+              icon: const Icon(Icons.search)),
+          const SizedBox(width: 10)
+        ],
+      ),
       body: GoogleMap(
         zoomControlsEnabled: false,
         markers: Set<Marker>.of(kCurrentLocationMarker.isNotEmpty
