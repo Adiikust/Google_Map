@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:custom_info_window/custom_info_window.dart';
 import 'package:flutter/material.dart';
 import 'package:geocoding/geocoding.dart';
@@ -19,6 +21,7 @@ class _CustomWindowInfoViewState extends State<CustomWindowInfoView> {
     customInfo();
   }
 
+  final Completer<GoogleMapController> _completer = Completer();
   final CustomInfoWindowController _customInfoWindowController =
       CustomInfoWindowController();
 
@@ -76,10 +79,86 @@ class _CustomWindowInfoViewState extends State<CustomWindowInfoView> {
     ));
   }
 
+  final themeKey = [
+    'assets/dark_theme.json',
+    'assets/night_theme.json',
+    'assets/retro_theme.json',
+    'assets/silver_theme.json',
+    'assets/aubergine_theme.json',
+  ];
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Google Map")),
+      appBar: AppBar(
+        title: const Text("Google Map"),
+        actions: [
+          PopupMenuButton(
+            itemBuilder: (context) => [
+              PopupMenuItem(
+                onTap: () {
+                  _completer.future.then((value) {
+                    DefaultAssetBundle.of(context)
+                        .loadString(themeKey[0])
+                        .then((valueTwo) {
+                      value.setMapStyle(valueTwo);
+                    });
+                  });
+                },
+                child: const Text('Dark'),
+              ),
+              PopupMenuItem(
+                onTap: () {
+                  _completer.future.then((value) {
+                    DefaultAssetBundle.of(context)
+                        .loadString(themeKey[1])
+                        .then((valueTwo) {
+                      value.setMapStyle(valueTwo);
+                    });
+                  });
+                },
+                child: const Text('Night'),
+              ),
+              PopupMenuItem(
+                onTap: () {
+                  _completer.future.then((value) {
+                    DefaultAssetBundle.of(context)
+                        .loadString(themeKey[2])
+                        .then((valueTwo) {
+                      value.setMapStyle(valueTwo);
+                    });
+                  });
+                },
+                child: const Text('Retro'),
+              ),
+              PopupMenuItem(
+                onTap: () {
+                  _completer.future.then((value) {
+                    DefaultAssetBundle.of(context)
+                        .loadString(themeKey[3])
+                        .then((valueTwo) {
+                      value.setMapStyle(valueTwo);
+                    });
+                  });
+                },
+                child: const Text('Silver'),
+              ),
+              PopupMenuItem(
+                onTap: () {
+                  _completer.future.then((value) {
+                    DefaultAssetBundle.of(context)
+                        .loadString(themeKey[4])
+                        .then((valueTwo) {
+                      value.setMapStyle(valueTwo);
+                    });
+                  });
+                },
+                child: const Text('Aubergine'),
+              ),
+            ],
+          )
+        ],
+      ),
       body: Stack(
         children: [
           GoogleMap(
@@ -89,6 +168,7 @@ class _CustomWindowInfoViewState extends State<CustomWindowInfoView> {
             initialCameraPosition: _kGooglePlex,
             onMapCreated: (GoogleMapController controller) {
               _customInfoWindowController.googleMapController = controller;
+              _completer.complete(controller);
             },
             onTap: (position) {
               _customInfoWindowController.hideInfoWindow!();

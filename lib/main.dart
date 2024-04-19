@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_map/custom_window_info_view.dart';
 import 'package:google_map/home_view.dart';
 
 void main() {
@@ -17,7 +18,7 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
-      home: const HomeView(),
+      home: const CustomWindowInfoView(),
     );
   }
 }
