@@ -1,10 +1,13 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_map/location_serach_view.dart';
 import 'package:google_map/utils/constant.dart';
+import 'package:google_map/utils/polyline_response.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:http/http.dart' as http;
 
 class HomeView extends StatefulWidget {
   const HomeView({super.key});
@@ -17,11 +20,18 @@ class _HomeViewState extends State<HomeView> {
   @override
   void initState() {
     super.initState();
-    kMarker.addAll(allMarker);
+
+    ///add marker in list
+    //kMarker.addAll(allMarker);
   }
 
-  ///for marker
-  BitmapDescriptor markerIcon = BitmapDescriptor.defaultMarker;
+  String totalDistance = "";
+  String totalTime = "";
+
+  ///polyline
+  PolylineResponse polylineResponse = PolylineResponse();
+
+  Set<Polyline> polylinePoints = {};
 
   ///Google map controller
   final Completer<GoogleMapController> _kController =
@@ -37,42 +47,29 @@ class _HomeViewState extends State<HomeView> {
   final List<Marker> kMarker = [];
   final List<Marker> kCurrentLocationMarker = [];
 
-  ///Custom marker
-  void addCustomIcon() {
-    BitmapDescriptor.fromAssetImage(
-            const ImageConfiguration(), "assets/Location_marker.png")
-        .then(
-      (icon) {
-        setState(() {
-          markerIcon = icon;
-        });
-      },
-    );
-  }
-
   ///Add marker in list
-  final List<Marker> allMarker = [
-    Marker(
-      markerId: const MarkerId('1'),
-      infoWindow: const InfoWindow(title: "1st", snippet: "Faizabad"),
-      position: LatLng(AppConstant.lat, AppConstant.lng),
-      draggable: true,
-      icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
-      onTap: () async {
-        ///LatLng convert to address
-        List<Placemark> placemarks =
-            await placemarkFromCoordinates(AppConstant.lat, AppConstant.lng);
-        final address = "${placemarks.first.street}";
-        print(address);
-      },
-    ),
-    const Marker(
-      markerId: MarkerId('2'),
-      infoWindow: InfoWindow(title: "2nd", snippet: "Rawalpindi Stadium"),
-      position: LatLng(33.65365272452291, 73.07205242134779),
-      draggable: true,
-    )
-  ];
+  // final List<Marker> allMarker = [
+  //   Marker(
+  //     markerId: const MarkerId('1'),
+  //     infoWindow: const InfoWindow(title: "1st", snippet: "Faizabad"),
+  //     position: LatLng(AppConstant.lat, AppConstant.lng),
+  //     draggable: true,
+  //     icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+  //     onTap: () async {
+  //       ///LatLng convert to address
+  //       List<Placemark> placemarks =
+  //           await placemarkFromCoordinates(AppConstant.lat, AppConstant.lng);
+  //       final address = "${placemarks.first.street}";
+  //       print(address);
+  //     },
+  //   ),
+  //   const Marker(
+  //     markerId: MarkerId('2'),
+  //     infoWindow: InfoWindow(title: "2nd", snippet: "Rawalpindi Stadium"),
+  //     position: LatLng(33.65365272452291, 73.07205242134779),
+  //     draggable: true,
+  //   )
+  // ];
 
   ///Get Current Location
   Future<Position> getCurrentLocation() async {
@@ -135,16 +132,34 @@ class _HomeViewState extends State<HomeView> {
           const SizedBox(width: 10)
         ],
       ),
-      body: GoogleMap(
-        zoomControlsEnabled: false,
-        markers: Set<Marker>.of(kCurrentLocationMarker.isNotEmpty
-            ? kCurrentLocationMarker
-            : kMarker),
-        mapType: MapType.normal,
-        initialCameraPosition: _kGooglePlex,
-        onMapCreated: (GoogleMapController controller) {
-          return _kController.complete(controller);
-        },
+      body: Stack(
+        children: [
+          GoogleMap(
+            polylines: polylinePoints,
+            zoomControlsEnabled: false,
+            markers: Set<Marker>.of(kCurrentLocationMarker.isNotEmpty
+                ? kCurrentLocationMarker
+                : kMarker),
+            mapType: MapType.normal,
+            initialCameraPosition: _kGooglePlex,
+            onMapCreated: (GoogleMapController controller) {
+              _kController.complete(controller);
+            },
+          ),
+          Container(
+            margin: const EdgeInsets.all(20),
+            padding: const EdgeInsets.all(20),
+            color: Colors.white,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text("Total Distance: " + totalDistance),
+                Text("Total Time: " + totalTime),
+              ],
+            ),
+          ),
+        ],
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
@@ -158,10 +173,73 @@ class _HomeViewState extends State<HomeView> {
           //       zoom: 19.151926040649414),
           // ));
           ///Get current location
-          pickCurrentLocationData();
+          //pickCurrentLocationData();
+          ///draw polyline
+          drawPolyline();
         },
         child: const Icon(Icons.location_searching_outlined),
       ),
     );
+  }
+
+  void drawPolyline() async {
+    String apiKey = "AIzaSyCvRYY_cKPzBLI1QqRgCOhP-BCnWXesEXg";
+
+    String originLat = "33.66062976080691";
+    String originLng = "73.08286701276366";
+    String destinationLat = "33.65365272452291";
+    String destinationLng = "73.07205242134779";
+
+    var response = await http.post(Uri.parse(
+        "https://maps.googleapis.com/maps/api/directions/json?key=$apiKey&units=metric&origin=$originLat,$originLng&destination=$destinationLat,$destinationLng&mode=driving"));
+
+    print(response.body);
+
+    polylineResponse = PolylineResponse.fromJson(jsonDecode(response.body));
+
+    totalDistance = polylineResponse.routes![0].legs![0].distance!.text!;
+    totalTime = polylineResponse.routes![0].legs![0].duration!.text!;
+
+    kMarker.clear();
+
+    // Add the origin marker
+    kMarker.add(Marker(
+      markerId: const MarkerId('origin'),
+      icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+      position: LatLng(AppConstant.lat, AppConstant.lng),
+      infoWindow: const InfoWindow(title: 'Origin'),
+    ));
+
+    // Add the destination marker
+    kMarker.add(const Marker(
+      markerId: MarkerId('destination'),
+      position: LatLng(33.65365272452291, 73.07205242134779),
+      infoWindow: InfoWindow(title: 'Destination'),
+    ));
+
+    polylinePoints.clear();
+
+    for (int i = 0;
+        i < polylineResponse.routes![0].legs![0].steps!.length;
+        i++) {
+      polylinePoints.add(Polyline(
+        polylineId: PolylineId(
+            polylineResponse.routes![0].legs![0].steps![i].polyline!.points!),
+        points: [
+          LatLng(
+              polylineResponse
+                  .routes![0].legs![0].steps![i].startLocation!.lat!,
+              polylineResponse
+                  .routes![0].legs![0].steps![i].startLocation!.lng!),
+          LatLng(
+              polylineResponse.routes![0].legs![0].steps![i].endLocation!.lat!,
+              polylineResponse.routes![0].legs![0].steps![i].endLocation!.lng!),
+        ],
+        width: 5,
+        color: Colors.red,
+      ));
+    }
+
+    setState(() {});
   }
 }
